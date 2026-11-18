@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f766e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="投料计算" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+  <link rel="icon" type="image/png" href="icon-192.png" />
+  <title>投料计算 · 有机合成移动端</title>
+  <style>
+    :root {
+      --bg: #f3f6fa;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --text: #0f172a;
+      --muted: #64748b;
+      --primary: #1d4ed8;
+      --primary-soft: #eff6ff;
+      --ref: #0f766e;
+      --ref-soft: #f0fdfa;
+      --ref-border: #99f6e4;
+      --danger: #dc2626;
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 15px;
+      line-height: 1.45;
+      overflow-x: hidden;
+    }
+
+    input[type="number"], .num { font-variant-numeric: tabular-nums; }
+    button { touch-action: manipulation; user-select: none; }
+
+    /* Sticky Top App Bar */
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: linear-gradient(135deg, #0f766e 0%, #1d4ed8 100%);
+      color: #fff;
+      padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 10px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.14);
+    }
+
+    .app-header-top {
+      max-width: 640px;
+      margin: 0 auto 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .app-title {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .top-btns { display: flex; gap: 6px; }
+
+    .top-btn {
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      background: rgba(255, 255, 255, 0.14);
+      color: #fff;
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .top-btn:active { background: rgba(255, 255, 255, 0.26); }
+
+    /* Segmented Tabs */
+    .seg-tabs {
+      max-width: 640px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background: rgba(15, 23, 42, 0.22);
+      padding: 3px;
+      border-radius: 10px;
+      gap: 4px;
+    }
+
+    .seg-tab {
+      border: none;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.82);
+      padding: 8px 6px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .seg-tab.active { background: #fff; color: var(--text); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15); }
+
+    /* Main Content */
+    .main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 12px 12px calc(env(safe-area-inset-bottom, 0px) + 94px);
+    }
+
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* Cards */
+    .reagent-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+    }
+    .reagent-card.is-ref { background: var(--ref-soft); border-color: var(--ref-border); }
+
+    .rc-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .rc-top-right { display: flex; align-items: center; gap: 6px; }
+
+    .ref-pill, .liq-pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border-strong);
+      background: #fff;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .reagent-card.is-ref .ref-pill { background: var(--ref); border-color: var(--ref); color: #fff; }
+    .liq-pill.on { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); }
+
+    .del-btn {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 16px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .del-btn:active { background: #fee2e2; color: var(--danger); }
+
+    .rc-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 8px 10px;
+    }
+    .rc-full { grid-column: 1 / -1; }
+
+    .fg label {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+    .ml-sub { font-size: 11px; color: var(--primary); font-weight: 600; margin-top: 2px; display: block; }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      min-width: 0;
+      padding: 9px 10px;
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      font-size: 16px;
+      color: var(--text);
+      background: #fff;
+      outline: none;
+      appearance: none;
+    }
+    input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.14); }
+    input[readonly] { background: #f1f5f9; color: var(--muted); }
+
+    .action-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .btn-block {
+      width: 100%;
+      padding: 11px 8px;
+      border-radius: 10px;
+      border: 1px dashed var(--primary);
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-block.teal {
+      border-color: var(--ref);
+      background: var(--ref-soft);
+      color: var(--ref);
+    }
+    .btn-block:active { opacity: 0.85; }
+
+    /* Section Card */
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+    }
+    .panel-title { font-size: 13.5px; font-weight: 700; margin: 0 0 8px; display: flex; align-items: center; justify-content: space-between; }
+    .formula-res { font-size: 13px; font-weight: 700; color: var(--ref); margin: 6px 0; min-height: 18px; }
+    .formula-res.err { color: var(--danger); font-weight: 500; }
+    .formula-apply-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 6px; }
+
+    .btn-solid {
+      padding: 9px 14px;
+      border: none;
+      border-radius: 8px;
+      background: var(--ref);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-solid.blue { background: var(--primary); }
+    .btn-solid:active { opacity: 0.88; }
+
+    .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .chip {
+      padding: 5px 11px;
+      border-radius: 999px;
+      border: 1px solid var(--border-strong);
+      background: #f8fafc;
+      color: var(--muted);
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .chip.active { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); font-weight: 700; }
+
+    /* Sticky Bottom Bar */
+    .bottom-bar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 90;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(8px);
+      border-top: 1px solid var(--border);
+      padding: 10px 14px calc(env(safe-area-inset-bottom, 0px) + 10px);
+      box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.08);
+    }
+    .bottom-bar-inner { max-width: 640px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .bb-info { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+    .bb-info strong { display: block; font-size: 15px; color: var(--primary); }
+
+    /* Tab 2 Checklist */
+    .summary-banner {
+      background: linear-gradient(135deg, #eff6ff 0%, #f0fdfa 100%);
+      border: 1px solid #bfdbfe;
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      font-size: 13px;
+    }
+    .summary-banner-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+    .sb-stat { background: #fff; border: 1px solid #dbeafe; border-radius: 8px; padding: 7px 10px; }
+    .sb-stat span { display: block; font-size: 11px; color: var(--muted); }
+    .sb-stat strong { font-size: 15.5px; color: var(--text); }
+
+    .check-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      margin-bottom: 9px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .check-card.is-ref { border-color: var(--ref-border); background: var(--ref-soft); }
+    .check-card.is-solv { border-color: #bfdbfe; background: var(--primary-soft); }
+    .check-card.checked { opacity: 0.58; background: #f8fafc; border-color: var(--border); }
+    .check-card.checked .cc-name { text-decoration: line-through; }
+
+    .check-box {
+      width: 24px;
+      height: 24px;
+      border-radius: 7px;
+      border: 2px solid var(--border-strong);
+      background: #fff;
+      flex-shrink: 0;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .check-card.checked .check-box { background: var(--ref); border-color: var(--ref); }
+    .cc-body { flex: 1; min-width: 0; }
+    .cc-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .cc-name { font-size: 15px; font-weight: 700; word-break: break-word; }
+    .cc-badge { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: #e2e8f0; color: #334155; flex-shrink: 0; }
+    .cc-badge.ref { background: #ccfbf1; color: #0f766e; }
+    .cc-badge.solv { background: #dbeafe; color: #1d4ed8; }
+    .cc-nums { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin-top: 4px; font-size: 13px; color: var(--muted); }
+    .cc-main-val { font-size: 17px; font-weight: 800; color: var(--text); }
+
+    .export-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+    .btn-outline {
+      padding: 10px 8px;
+      border-radius: 9px;
+      border: 1px solid var(--border-strong);
+      background: #fff;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-outline:active { background: #f1f5f9; }
+
+    /* Modal for Common Reagents */
+    .modal-bg {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 400;
+    }
+    .modal-bg.open { display: flex; }
+    .sheet {
+      width: 100%;
+      max-width: 640px;
+      max-height: 78vh;
+      background: #fff;
+      border-radius: 16px 16px 0 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    .sheet-head {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 700;
+    }
+    .sheet-body { padding: 12px 14px; overflow-y: auto; }
+    .lib-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .lib-item {
+      padding: 9px 10px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: #f8fafc;
+      cursor: pointer;
+    }
+    .lib-item:active { background: var(--primary-soft); border-color: var(--primary); }
+    .lib-item strong { display: block; font-size: 13.5px; }
+    .lib-item span { font-size: 11.5px; color: var(--muted); }
+
+    .install-tip {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #fff;
+      border: 1px dashed var(--border-strong);
+      font-size: 12px;
+      color: var(--muted);
+      display: none;
+    }
+
+    /* Brand Watermark & Promo Sign */
+    .wm-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 250;
+      background-repeat: repeat;
+      background-size: 220px 140px;
+    }
+    .brand-sign {
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 14px;
+      padding: 8px 10px;
+      background: rgba(255, 255, 255, 0.72);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 78px;
+      left: 50%;
+      transform: translateX(-50%) translateY(14px);
+      background: #0f172a;
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 13px;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.2s;
+      z-index: 500;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+  <div class="wm-layer" id="wmLayer"></div>
+  <header class="app-header">
+    <div class="app-header-top">
+      <h1 class="app-title">🧪 投料计算 <span style="font-size:11px;font-weight:500;opacity:0.88;">耄耋小镇的基米大王 制作</span></h1>
+      <div class="top-btns">
+        <button type="button" class="top-btn" onclick="loadSample()">示例</button>
+        <button type="button" class="top-btn" onclick="resetBlank()">清空</button>
+      </div>
+    </div>
+    <nav class="seg-tabs">
+      <button type="button" class="seg-tab active" id="tabBtnInput" onclick="switchTab('input')">✏️ 录入原料</button>
+      <button type="button" class="seg-tab" id="tabBtnOutput" onclick="switchTab('output')">📋 投料清单</button>
+    </nav>
+  </header>
+
+  <main class="main">
+    <!-- TAB 1: INPUT -->
+    <section class="tab-pane active" id="paneInput">
+      <div id="cardsContainer"></div>
+
+      <div class="action-row-2">
+        <button type="button" class="btn-block" onclick="addRow()">＋ 添加物料</button>
+        <button type="button" class="btn-block teal" onclick="openLib()">🧪 常用试剂快填</button>
+      </div>
+
+      <!-- Formula / SMILES Calculator -->
+      <div class="panel">
+        <div class="panel-title"><span>⚗️ 分子式 / SMILES 算 MW</span></div>
+        <input type="text" id="formulaInput" placeholder="如 C10H15F6N6OP 或 c1ccccc1C(=O)O"
+          oninput="onFormulaInput()" onkeydown="if(event.key==='Enter') applyFormulaToRow()" />
+        <div class="formula-res" id="formulaRes">支持 SMILES、分子式、括号、·HCl、·H2O</div>
+        <div class="formula-apply-row">
+          <select id="formulaTargetRow"></select>
+          <button type="button" class="btn-solid" onclick="applyFormulaToRow()">填入 MW</button>
+        </div>
+      </div>
+
+      <!-- Solvent Settings -->
+      <div class="panel">
+        <div class="panel-title"><span>💧 建议溶剂设置</span></div>
+        <div class="rc-grid">
+          <div class="fg">
+            <label>溶剂名称（选填）</label>
+            <input type="text" id="solventName" placeholder="如 DMF / DCM" oninput="updateSolvent('name', this.value)" />
+          </div>
+          <div class="fg">
+            <label>反应浓度 (mol/L)</label>
+            <input type="number" inputmode="decimal" step="any" min="0.001" id="concM" oninput="updateSolvent('concM', this.value)" />
+          </div>
+        </div>
+        <div class="chip-row" id="concChips">
+          <span class="chip" onclick="setConc(0.05)">0.05 M</span>
+          <span class="chip" onclick="setConc(0.1)">0.1 M</span>
+          <span class="chip" onclick="setConc(0.2)">0.2 M</span>
+          <span class="chip" onclick="setConc(0.5)">0.5 M</span>
+        </div>
+      </div>
+
+      <div class="brand-sign">
+        🧪 小红书 / 闲鱼搜「<strong>耄耋小镇的基米大王</strong>」获取更新与更多科研工具
+      </div>
+    </section>
+
+    <!-- TAB 2: OUTPUT CHECKLIST -->
+    <section class="tab-pane" id="paneOutput">
+      <div class="summary-banner" id="summaryBanner"></div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+        <span style="font-size:12.5px; color:var(--muted);">👇 通风橱称量时，点一下卡片即可打勾防忘</span>
+        <button type="button" style="border:none;background:transparent;color:var(--primary);font-size:12.5px;font-weight:600;cursor:pointer;" onclick="clearChecks()">重置勾选</button>
+      </div>
+      <div id="checklistContainer"></div>
+
+      <div class="export-grid">
+        <button type="button" class="btn-outline" onclick="copyTextSummary()">📋 复制微信/备忘录文本</button>
+        <button type="button" class="btn-outline" onclick="copyForExcel()">📊 复制 Excel 表格</button>
+      </div>
+
+      <div class="brand-sign">
+        🧪 小红书 / 闲鱼搜「<strong>耄耋小镇的基米大王</strong>」获取更新与更多科研工具
+      </div>
+    </section>
+  </main>
+
+  <!-- Sticky Bottom Bar on Input Tab -->
+  <div class="bottom-bar" id="bottomBar">
+    <div class="bottom-bar-inner">
+      <div class="bb-info" id="bottomBarInfo">
+        <span>请先设定基准物料</span>
+        <strong>建议溶剂：—</strong>
+      </div>
+      <button type="button" class="btn-solid blue" onclick="switchTab('output')">查看投料单 →</button>
+    </div>
+  </div>
+
+  <!-- Common Reagents Bottom Sheet -->
+  <div class="modal-bg" id="libModal" onclick="if(event.target===this) closeLib()">
+    <div class="sheet">
+      <div class="sheet-head">
+        <span id="libTitle">🧪 常用药化试剂（点选直接添加）</span>
+        <button type="button" style="border:none;background:#f1f5f9;padding:5px 10px;border-radius:6px;font-weight:600;cursor:pointer;" onclick="closeLib()">关闭</button>
+      </div>
+      <div class="sheet-body">
+        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;" id="libTabs">
+          <span class="chip active" onclick="setLibFilter('all', this)">全部</span>
+          <span class="chip" onclick="setLibFilter('liquid', this)">💧 常用液体（含密度）</span>
+          <span class="chip" onclick="setLibFilter('solid', this)">🧊 常用固体</span>
+        </div>
+        <input type="text" id="libSearch" placeholder="搜简称：HATU、DIPEA、Ac2O、POCl3、K2CO3、TFA..." oninput="renderLibGrid()" />
+        <div class="lib-list" id="libGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const STORAGE_KEY = 'org_synth_mobile_v1_1';
+
+    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+
+    const COMMON_REAGENTS = [
+      { name: 'HATU', mw: 380.23, isLiquid: false, density: '', eq: 1.2 },
+      { name: 'EDCI·HCl', mw: 191.70, isLiquid: false, density: '', eq: 1.2 },
+      { name: 'HOBt', mw: 135.12, isLiquid: false, density: '', eq: 1.2 },
+      { name: 'CDI', mw: 162.15, isLiquid: false, density: '', eq: 1.2 },
+      { name: 'DMAP', mw: 122.17, isLiquid: false, density: '', eq: 0.1 },
+      { name: 'DIPEA', mw: 129.24, isLiquid: true, density: 0.742, eq: 2.5 },
+      { name: 'Et3N (TEA)', aliases: ['TEA', 'Et3N'], mw: 101.19, isLiquid: true, density: 0.726, eq: 2.5 },
+      { name: 'DBU', mw: 152.24, isLiquid: true, density: 1.018, eq: 1.5 },
+      { name: 'NMM', mw: 101.15, isLiquid: true, density: 0.920, eq: 2.0 },
+      { name: 'Pyridine', aliases: ['吡啶'], mw: 79.10, isLiquid: true, density: 0.982, eq: 2.0 },
+      { name: 'Piperidine', aliases: ['哌啶'], mw: 85.15, isLiquid: true, density: 0.862, eq: 2.0 },
+      { name: 'Morpholine', aliases: ['吗啉'], mw: 87.12, isLiquid: true, density: 0.996, eq: 1.5 },
+      { name: 'K2CO3', mw: 138.21, isLiquid: false, density: '', eq: 2.5 },
+      { name: 'Cs2CO3', mw: 325.82, isLiquid: false, density: '', eq: 2.0 },
+      { name: 'Pd(dppf)Cl2', mw: 731.70, isLiquid: false, density: '', eq: 0.05 },
+      { name: 'Pd(dppf)Cl2·DCM', mw: 816.64, isLiquid: false, density: '', eq: 0.05 },
+      { name: 'Pd(PPh3)4', mw: 1155.56, isLiquid: false, density: '', eq: 0.05 },
+      { name: 'Pd(OAc)2', mw: 224.51, isLiquid: false, density: '', eq: 0.05 },
+      { name: 'CuI', mw: 190.45, isLiquid: false, density: '', eq: 0.1 },
+      { name: 'PPh3', mw: 262.29, isLiquid: false, density: '', eq: 0.2 },
+      { name: 'BINAP', mw: 622.67, isLiquid: false, density: '', eq: 0.1 },
+      { name: 'XPhos', mw: 476.72, isLiquid: false, density: '', eq: 0.1 },
+      { name: 'NaBH4', mw: 37.83, isLiquid: false, density: '', eq: 1.5 },
+      { name: 'LiAlH4', mw: 37.95, isLiquid: false, density: '', eq: 1.5 },
+      { name: 'NaBH(OAc)3', mw: 211.94, isLiquid: false, density: '', eq: 1.5 },
+      { name: 'TFA', aliases: ['三氟乙酸'], mw: 114.02, isLiquid: true, density: 1.489, eq: 10.0 },
+      { name: 'AcOH', aliases: ['冰醋酸'], mw: 60.05, isLiquid: true, density: 1.049, eq: 1.0 },
+      { name: 'Boc2O', mw: 218.25, isLiquid: true, density: 0.950, eq: 1.2 },
+      { name: 'MsCl', mw: 114.55, isLiquid: true, density: 1.480, eq: 1.2 },
+      { name: 'SOCl2', mw: 118.97, isLiquid: true, density: 1.631, eq: 2.0 },
+      { name: 'Tf2O', mw: 282.14, isLiquid: true, density: 1.677, eq: 1.2 },
+      { name: 'TfOH', aliases: ['三氟甲磺酸'], mw: 150.08, isLiquid: true, density: 1.696, eq: 1.5 },
+      { name: 'TMSCl', mw: 108.64, isLiquid: true, density: 0.856, eq: 1.5 },
+      { name: 'Et3SiH', aliases: ['三乙基硅烷', 'TES'], mw: 116.28, isLiquid: true, density: 0.728, eq: 2.0 },
+      { name: 'Ac2O', aliases: ['乙酸酐', '醋酸酐'], mw: 102.09, isLiquid: true, density: 1.080, eq: 1.5 },
+      { name: 'AcCl', aliases: ['乙酰氯'], mw: 78.50, isLiquid: true, density: 1.104, eq: 1.2 },
+      { name: 'BzCl', aliases: ['苯甲酰氯'], mw: 140.57, isLiquid: true, density: 1.210, eq: 1.2 },
+      { name: '(COCl)2', aliases: ['草酰氯'], mw: 126.93, isLiquid: true, density: 1.480, eq: 1.5 },
+      { name: 'POCl3', aliases: ['三氯氧磷'], mw: 153.33, isLiquid: true, density: 1.645, eq: 2.0 },
+      { name: 'PBr3', aliases: ['三溴化磷'], mw: 270.69, isLiquid: true, density: 2.880, eq: 1.5 },
+      { name: 'BF3·OEt2', aliases: ['三氟化硼乙醚', 'BF3OEt2'], mw: 141.93, isLiquid: true, density: 1.150, eq: 1.5 },
+      { name: 'DIAD', mw: 202.21, isLiquid: true, density: 1.027, eq: 1.5 },
+      { name: 'TMEDA', mw: 116.20, isLiquid: true, density: 0.775, eq: 1.5 },
+      { name: 'HCOOH', aliases: ['甲酸'], mw: 46.03, isLiquid: true, density: 1.220, eq: 2.0 },
+      { name: 'MeI', aliases: ['碘甲烷'], mw: 141.94, isLiquid: true, density: 2.280, eq: 1.5 },
+      { name: 'BnBr', aliases: ['苄溴'], mw: 171.03, isLiquid: true, density: 1.438, eq: 1.2 },
+      { name: 'Aniline', aliases: ['苯胺'], mw: 93.13, isLiquid: true, density: 1.022, eq: 1.1 },
+      { name: 'BnNH2', aliases: ['苄胺'], mw: 107.15, isLiquid: true, density: 0.981, eq: 1.1 },
+      { name: 'iPr2NH', aliases: ['二异丙胺'], mw: 101.19, isLiquid: true, density: 0.722, eq: 1.2 },
+      { name: 'DMF (试剂/催化)', aliases: ['DMF'], mw: 73.09, isLiquid: true, density: 0.944, eq: 0.1 },
+      { name: 'MeOH (试剂)', aliases: ['MeOH', '甲醇'], mw: 32.04, isLiquid: true, density: 0.791, eq: 5.0 },
+      { name: 'H2O (试剂)', aliases: ['H2O', '水'], mw: 18.02, isLiquid: true, density: 1.000, eq: 1.0 }
+    ];
+
+    function normKey(s) {
+      const subMap = { '₀':'0','₁':'1','₂':'2','₃':'3','₄':'4','₅':'5','₆':'6','₇':'7','₈':'8','₉':'9' };
+      return String(s || '').trim().replace(/[₀-₉]/g, c => subMap[c]).replace(/\s+/g, '').toLowerCase();
+    }
+
+    function findPresetReagent(name, mode = 'all') {
+      const k = normKey(name);
+      if (!k) return null;
+      return COMMON_REAGENTS.find(item => {
+        if (mode === 'liquid' && !item.isLiquid) return false;
+        if (mode === 'solid' && item.isLiquid) return false;
+        return normKey(item.name) === k || (item.aliases && item.aliases.some(a => normKey(a) === k));
+      }) || null;
+    }
+
+    const ATOMIC_WEIGHTS = {
+      H: 1.008, D: 2.014, He: 4.0026,
+      Li: 6.94, Be: 9.0122, B: 10.81, C: 12.011, N: 14.007, O: 15.999, F: 18.998, Ne: 20.180,
+      Na: 22.990, Mg: 24.305, Al: 26.982, Si: 28.085, P: 30.974, S: 32.06, Cl: 35.45, Ar: 39.948,
+      K: 39.098, Ca: 40.078, Sc: 44.956, Ti: 47.867, V: 50.942, Cr: 51.996, Mn: 54.938, Fe: 55.845,
+      Co: 58.933, Ni: 58.693, Cu: 63.546, Zn: 65.38, Ga: 69.723, Ge: 72.630, As: 74.922, Se: 78.971,
+      Br: 79.904, Kr: 83.798, Rb: 85.468, Sr: 87.62, Y: 88.906, Zr: 91.224, Nb: 92.906, Mo: 95.95,
+      Ru: 101.07, Rh: 102.91, Pd: 106.42, Ag: 107.87, Cd: 112.41, In: 114.82, Sn: 118.71, Sb: 121.76,
+      Te: 127.60, I: 126.904, Xe: 131.29, Cs: 132.905, Ba: 137.33, La: 138.91, Ce: 140.12,
+      Nd: 144.24, Sm: 150.36, Eu: 151.96, Gd: 157.25, Tb: 158.93, Dy: 162.50, Ho: 164.93, Er: 167.26,
+      Tm: 168.93, Yb: 173.05, Lu: 174.97, Hf: 178.49, Ta: 180.95, W: 183.84, Re: 186.21, Os: 190.23,
+      Ir: 192.22, Pt: 195.08, Au: 196.97, Hg: 200.59, Tl: 204.38, Pb: 207.2, Bi: 208.98
+    };
+
+    const ORGANIC_GROUPS = {
+      TBDMS: { C: 6, H: 15, Si: 1 }, Fmoc: { C: 15, H: 11, O: 2 }, dppf: { C: 34, H: 28, Fe: 1, P: 2 },
+      OAc: { C: 2, H: 3, O: 2 }, Boc: { C: 5, H: 9, O: 2 }, Cbz: { C: 8, H: 7, O: 2 },
+      TMS: { C: 3, H: 9, Si: 1 }, TBS: { C: 6, H: 15, Si: 1 }, tBu: { C: 4, H: 9 },
+      nBu: { C: 4, H: 9 }, sBu: { C: 4, H: 9 }, iPr: { C: 3, H: 7 }, nPr: { C: 3, H: 7 },
+      Ac: { C: 2, H: 3, O: 1 }, Ph: { C: 6, H: 5 }, Me: { C: 1, H: 3 }, Et: { C: 2, H: 5 },
+      Bu: { C: 4, H: 9 }, Bn: { C: 7, H: 7 }, Bz: { C: 7, H: 5, O: 1 },
+      Ts: { C: 7, H: 7, O: 2, S: 1 }, Ms: { C: 1, H: 3, O: 2, S: 1 }, Tf: { C: 1, F: 3, O: 2, S: 1 }
+    };
+
+    const GROUP_KEYS = Object.keys(ORGANIC_GROUPS).sort((a, b) => b.length - a.length);
+    const ELEM_KEYS = Object.keys(ATOMIC_WEIGHTS).sort((a, b) => b.length - a.length);
+
+    function normalizeFormulaStr(raw) {
+      const subMap = { '₀':'0','₁':'1','₂':'2','₃':'3','₄':'4','₅':'5','₆':'6','₇':'7','₈':'8','₉':'9' };
+      return String(raw || '').trim().replace(/[₀-₉]/g, ch => subMap[ch]).replace(/[•・*]/g, '·').replace(/\s+/g, '');
+    }
+
+    function splitFormulaSegments(str) {
+      const segs = []; let cur = '';
+      for (let i = 0; i < str.length; i++) {
+        const ch = str[i], prev = i > 0 ? str[i - 1] : '', next = i + 1 < str.length ? str[i + 1] : '';
+        if (ch === '·') { if (cur) segs.push(cur); cur = ''; }
+        else if (ch === '.' && !(/\d/.test(prev) && /\d/.test(next))) { if (cur) segs.push(cur); cur = ''; }
+        else cur += ch;
+      }
+      if (cur) segs.push(cur);
+      return segs;
+    }
+
+    function addCounts(target, src, mult = 1) { for (const [k, v] of Object.entries(src)) target[k] = (target[k] || 0) + v * mult; }
+
+    function buildHillFormula(counts) {
+      const clean = {};
+      for (const [k, v] of Object.entries(counts)) if (v > 1e-6) clean[k] = v;
+      const keys = Object.keys(clean), ordered = [];
+      if (clean.C) ordered.push('C');
+      if (clean.C && clean.H) ordered.push('H');
+      keys.filter(k => !ordered.includes(k)).sort().forEach(k => ordered.push(k));
+      return ordered.map(k => { const c = Number(clean[k].toFixed(3)); return c === 1 ? k : `${k}${c}`; }).join('');
+    }
+
+    function parseFormulaSegment(seg) {
+      let i = 0, leadMult = 1;
+      const leadMatch = seg.match(/^(\d+(?:\.\d+)?)/);
+      if (leadMatch) { leadMult = Number(leadMatch[1]); i = leadMatch[1].length; if (i >= seg.length) return { error: '缺少化学式主体' }; }
+      const stack = [{}];
+      while (i < seg.length) {
+        const ch = seg[i];
+        if (ch === '(' || ch === '[') { stack.push({}); i++; }
+        else if (ch === ')' || ch === ']') {
+          if (stack.length === 1) return { error: '括号不匹配' };
+          i++;
+          const numMatch = seg.slice(i).match(/^(\d+(?:\.\d+)?)/);
+          const mult = numMatch ? Number(numMatch[1]) : 1;
+          if (numMatch) i += numMatch[1].length;
+          const popped = stack.pop();
+          addCounts(stack[stack.length - 1], popped, mult);
+        } else {
+          const rest = seg.slice(i);
+          let matchedGroup = null;
+          for (const g of GROUP_KEYS) if (rest.startsWith(g)) { matchedGroup = g; break; }
+          if (matchedGroup) {
+            i += matchedGroup.length;
+            const numMatch = rest.slice(matchedGroup.length).match(/^(\d+(?:\.\d+)?)/);
+            const mult = numMatch ? Number(numMatch[1]) : 1;
+            if (numMatch) i += numMatch[1].length;
+            addCounts(stack[stack.length - 1], ORGANIC_GROUPS[matchedGroup], mult);
+            continue;
+          }
+          let matchedElem = null;
+          for (const el of ELEM_KEYS) if (rest.startsWith(el)) { matchedElem = el; break; }
+          if (!matchedElem) return { error: `无法识别符号 "${seg[i]}"` };
+          i += matchedElem.length;
+          const numMatch = rest.slice(matchedElem.length).match(/^(\d+(?:\.\d+)?)/);
+          const mult = numMatch ? Number(numMatch[1]) : 1;
+          if (numMatch) i += numMatch[1].length;
+          stack[stack.length - 1][matchedElem] = (stack[stack.length - 1][matchedElem] || 0) + mult;
+        }
+      }
+      if (stack.length !== 1) return { error: '括号未闭合' };
+      const out = {};
+      addCounts(out, stack[0], leadMult);
+      return { counts: out };
+    }
+
+    function calculateFormulaMW(raw) {
+      const norm = normalizeFormulaStr(raw);
+      if (!norm) return null;
+      const segs = splitFormulaSegments(norm);
+      if (segs.length === 0) return { error: '化学式格式无效' };
+      const totalCounts = {};
+      for (const seg of segs) {
+        const res = parseFormulaSegment(seg);
+        if (res.error) return { error: res.error };
+        addCounts(totalCounts, res.counts, 1);
+      }
+      let mw = 0;
+      for (const [el, cnt] of Object.entries(totalCounts)) {
+        if (!ATOMIC_WEIGHTS[el]) return { error: `不支持元素 ${el}` };
+        mw += ATOMIC_WEIGHTS[el] * cnt;
+      }
+      if (mw <= 0) return { error: '无效化学式' };
+      return { mw: Number(mw.toFixed(2)), hill: buildHillFormula(totalCounts), mode: '分子式' };
+    }
+
+    const ISOTOPE_MASS = { '2H': 2.0141, '3H': 3.0160, '13C': 13.0034, '14C': 14.0032, '15N': 15.0001, '18O': 17.9992, '18F': 18.0009 };
+    const SMILES_VALENCE_AROM = { B: 3, C: 4, N: 3, O: 2, P: 3, S: 2 };
+    const SMILES_VALENCE_ALIPH = { B: [3], C: [4], N: [3, 5], O: [2], P: [3, 5], S: [2, 4, 6], F: [1], Cl: [1], Br: [1], I: [1] };
+
+    function parseSMILES(raw) {
+      const str = String(raw || '').trim();
+      if (!str || /\s/.test(str)) return { error: 'SMILES 不能包含空白字符' };
+      const atoms = [], branchStack = [], rings = {};
+      let currAtom = null, pendingBond = null;
+      const BOND_MAP = { '-': 1, '/': 1, '\\': 1, '=': 2, '#': 3, '$': 4, ':': 1.5 };
+
+      function linkAtoms(aIdx, bIdx, explicitOrder) {
+        const a = atoms[aIdx], b = atoms[bIdx];
+        const order = explicitOrder !== null ? explicitOrder : ((a.isAromatic && b.isAromatic) ? 1.5 : 1);
+        a.bondSum += order; b.bondSum += order;
+      }
+
+      let i = 0;
+      while (i < str.length) {
+        const ch = str[i];
+        if (ch === '.') { if (pendingBond !== null || branchStack.length > 0) return { error: 'SMILES "." 处语法不完整' }; currAtom = null; i++; continue; }
+        if (ch === '(') { if (currAtom === null || pendingBond !== null) return { error: 'SMILES 分支括号位置无效' }; branchStack.push(currAtom); i++; continue; }
+        if (ch === ')') { if (branchStack.length === 0 || pendingBond !== null) return { error: 'SMILES 分支括号不匹配' }; currAtom = branchStack.pop(); i++; continue; }
+        if (BOND_MAP[ch] !== undefined) { pendingBond = BOND_MAP[ch]; i++; continue; }
+        if (ch === '%' || (ch >= '0' && ch <= '9')) {
+          if (currAtom === null) return { error: '环编号缺少连接原子' };
+          let ringId;
+          if (ch === '%') { const m = str.slice(i + 1).match(/^(\d\d)/); if (!m) return { error: '无效环编号 %' }; ringId = m[1]; i += 3; }
+          else { ringId = ch; i += 1; }
+          if (rings[ringId]) {
+            const open = rings[ringId]; delete rings[ringId];
+            if (open.atomIdx === currAtom) return { error: '环不能自连' };
+            const order = pendingBond !== null ? pendingBond : (open.bondOrder !== null ? open.bondOrder : ((atoms[open.atomIdx].isAromatic && atoms[currAtom].isAromatic) ? 1.5 : 1));
+            atoms[open.atomIdx].bondSum += order; atoms[currAtom].bondSum += order;
+          } else { rings[ringId] = { atomIdx: currAtom, bondOrder: pendingBond }; }
+          pendingBond = null; continue;
+        }
+        if (ch === '[') {
+          const end = str.indexOf(']', i + 1);
+          if (end === -1) return { error: 'SMILES 方括号未闭合' };
+          const inner = str.slice(i + 1, end);
+          let p = 0, iso = null;
+          const isoM = inner.slice(p).match(/^(\d+)/);
+          if (isoM) { iso = Number(isoM[1]); p += isoM[1].length; }
+          let elemSym = null, isArom = false;
+          const restInner = inner.slice(p);
+          if (restInner.startsWith('se') || restInner.startsWith('as')) { elemSym = restInner[0].toUpperCase() + restInner[1]; isArom = true; p += 2; }
+          else if (/^[cnopsb]/.test(restInner)) { elemSym = restInner[0].toUpperCase(); isArom = true; p += 1; }
+          else {
+            const el2 = restInner.match(/^([A-Z][a-z])/);
+            if (el2 && ATOMIC_WEIGHTS[el2[1]]) { elemSym = el2[1]; p += 2; }
+            else { const el1 = restInner.match(/^([A-Z])/); if (el1 && ATOMIC_WEIGHTS[el1[1]]) { elemSym = el1[1]; p += 1; } }
+          }
+          if (!elemSym) return { error: `SMILES 未知原子 [${inner}]` };
+          const chirM = inner.slice(p).match(/^(@@?|@(?:TH|AL|SP|TB|OH)\d+)/);
+          if (chirM) p += chirM[1].length;
+          let explicitH = 0;
+          const hM = inner.slice(p).match(/^H(\d*)/);
+          if (hM) { explicitH = hM[1] ? Number(hM[1]) : 1; p += hM[0].length; }
+          const chgM = inner.slice(p).match(/^(\+\+|\-\-|[+-]\d*)/);
+          if (chgM) p += chgM[1].length;
+          const mapM = inner.slice(p).match(/^:\d+/);
+          if (mapM) p += mapM[0].length;
+          if (p !== inner.length) return { error: `SMILES 语法无法解析 [${inner}]` };
+          let massOverride = null, displayElem = elemSym;
+          if (iso !== null) {
+            const key = `${iso}${elemSym}`;
+            if (ISOTOPE_MASS[key]) { massOverride = ISOTOPE_MASS[key]; if (key === '2H') displayElem = 'D'; }
+            else massOverride = iso;
+          }
+          const idx = atoms.length;
+          atoms.push({ elem: displayElem, isAromatic: isArom, bracketed: true, explicitH, bondSum: 0, massOverride });
+          if (currAtom !== null) linkAtoms(currAtom, idx, pendingBond);
+          currAtom = idx; pendingBond = null; i = end + 1; continue;
+        }
+        const rest = str.slice(i);
+        let tok = null;
+        if (rest.startsWith('Cl')) tok = 'Cl';
+        else if (rest.startsWith('Br')) tok = 'Br';
+        else if (/^[BCNOPSFIbcnops]/.test(rest)) tok = rest[0];
+        if (!tok) return { error: `SMILES 无法识别字符 "${ch}"` };
+        const isArom = tok === tok.toLowerCase() && tok.length === 1;
+        const elem = tok.length === 2 ? tok : tok.toUpperCase();
+        const idx = atoms.length;
+        atoms.push({ elem, isAromatic: isArom, bracketed: false, explicitH: 0, bondSum: 0, massOverride: null });
+        if (currAtom !== null) linkAtoms(currAtom, idx, pendingBond);
+        currAtom = idx; pendingBond = null; i += tok.length;
+      }
+      if (atoms.length === 0) return { error: 'SMILES 为空' };
+      if (pendingBond !== null) return { error: 'SMILES 末尾存在未连接的化学键' };
+      if (branchStack.length > 0) return { error: 'SMILES 括号未闭合' };
+      if (Object.keys(rings).length > 0) return { error: `SMILES 环编号 ${Object.keys(rings).join(',')} 未闭合` };
+
+      const counts = {};
+      let mw = 0;
+      for (const a of atoms) {
+        const atomMass = a.massOverride !== null ? a.massOverride : ATOMIC_WEIGHTS[a.elem];
+        if (!atomMass) return { error: `不支持元素 ${a.elem}` };
+        counts[a.elem] = (counts[a.elem] || 0) + 1;
+        mw += atomMass;
+        let hCount = 0;
+        if (a.bracketed) hCount = a.explicitH;
+        else if (a.isAromatic) hCount = Math.max(0, Math.floor((SMILES_VALENCE_AROM[a.elem] ?? 0) - a.bondSum + 1e-6));
+        else { const valList = SMILES_VALENCE_ALIPH[a.elem] || []; const targetV = valList.find(v => v >= a.bondSum); hCount = targetV !== undefined ? (targetV - a.bondSum) : 0; }
+        if (hCount > 0) { counts.H = (counts.H || 0) + hCount; mw += hCount * ATOMIC_WEIGHTS.H; }
+      }
+      return { mw: Number(mw.toFixed(2)), hill: buildHillFormula(counts), mode: 'SMILES' };
+    }
+
+    function calculateFormulaOrSmilesMW(raw) {
+      const trimmed = String(raw || '').trim();
+      if (!trimmed) return null;
+      const unbracketed = trimmed.replace(/\[[^\]]*\]/g, '');
+      const hasFormulaMarkers =
+        /[₀-₉·•・*]/.test(trimmed) || /H/.test(unbracketed) ||
+        GROUP_KEYS.some(g => unbracketed.includes(g)) ||
+        /(?:Na|Li|Mg|Ca|Fe|Pd|Pt|Cu|Zn|Cs|Al|Si|Ag|Au|Sn|Mn|Co|Ni|Cr|Ti|Ru|Rh|Ir|Ba|Hg|Pb|Bi|Cd|Se|As|K)/.test(unbracketed);
+      if (hasFormulaMarkers) return calculateFormulaMW(trimmed);
+      const hasSmilesMarkers = /[\[\]=#@/\\:%]/.test(trimmed) || /[cnospb]/.test(unbracketed.replace(/Cl|Br/g, ''));
+      if (hasSmilesMarkers) return parseSMILES(trimmed);
+      const smRes = parseSMILES(trimmed);
+      if (smRes && !smRes.error) return smRes;
+      return calculateFormulaMW(trimmed);
+    }
+
+    let state = null;
+    let lastParsedMw = null;
+    let lastParsedHill = '';
+
+    function uid() { return 'r_' + Math.random().toString(36).slice(2, 9); }
+    function toNum(v) { if (v === '' || v === null || v === undefined) return ''; const n = Number(v); return Number.isFinite(n) ? n : ''; }
+    function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function fmtInput(val, dp = 2) { if (val === '' || !Number.isFinite(val)) return ''; return Number(val.toFixed(dp)).toString(); }
+
+    function fmtMass(mg) {
+      if (mg === '' || !Number.isFinite(mg)) return '—';
+      if (mg >= 1000) return `${mg.toFixed(1)} mg (${(mg / 1000).toFixed(2)} g)`;
+      if (mg > 0 && mg < 10) return `${mg.toFixed(2)} mg`;
+      return `${mg.toFixed(1)} mg`;
+    }
+
+    function fmtVol(uL) {
+      if (uL === '' || !Number.isFinite(uL) || uL <= 0) return '—';
+      if (uL >= 1000) return `${(uL / 1000).toFixed(2)} mL (${Math.round(uL)} μL)`;
+      if (uL < 20) return `${uL.toFixed(1)} μL`;
+      return `${Math.round(uL * 10) / 10} μL`;
+    }
+
+    function fmtMmol(v) { if (v === '' || !Number.isFinite(v)) return '—'; if (v > 0 && v < 0.1) return v.toFixed(3); return v.toFixed(2); }
+    function fmtEquiv(v) { if (v === '' || !Number.isFinite(v)) return '—'; if (v > 0 && v < 0.1) return v.toFixed(3).replace(/0$/, ''); return v.toFixed(2); }
+
+    function fmtSolvent(ml) {
+      if (!Number.isFinite(ml) || ml <= 0) return '—';
+      if (ml < 1) return `${(ml * 1000).toFixed(0)} μL (${ml.toFixed(2)} mL)`;
+      if (ml < 10) return `${ml.toFixed(2)} mL`;
+      return `${ml.toFixed(1)} mL`;
+    }
+
+    function recommendFlask(ml) {
+      if (!ml || ml <= 0) return '—';
+      if (ml < 2) return '5 mL 反应瓶';
+      if (ml < 5.5) return '10 mL 反应管';
+      if (ml < 14) return '25 mL 单口瓶';
+      if (ml < 28) return '50 mL 单口瓶';
+      if (ml < 55) return '100 mL 烧瓶';
+      if (ml < 140) return '250 mL 烧瓶';
+      if (ml < 280) return '500 mL 烧瓶';
+      return '≥ 1000 mL 烧瓶';
+    }
+
+    function sampleData() {
+      return {
+        rows: [
+          { id: uid(), name: '羧酸底物 A (示例)', mw: 200.00, isLiquid: false, density: '', volUl: '', massMg: 200.0, mmol: 1.00, equiv: 1.00, isRef: true, _driver: 'mass', checked: false },
+          { id: uid(), name: 'HATU', mw: 380.23, isLiquid: false, density: '', volUl: '', massMg: '', mmol: '', equiv: 1.20, isRef: false, _driver: 'equiv', checked: false },
+          { id: uid(), name: 'DIPEA', mw: 129.24, isLiquid: true, density: 0.742, volUl: '', massMg: '', mmol: '', equiv: 2.50, isRef: false, _driver: 'equiv', checked: false }
+        ],
+        solventName: 'DMF',
+        concM: 0.2,
+        solventChecked: false
+      };
+    }
+
+    function getRef() { return state.rows.find(r => r.isRef) || state.rows[0]; }
+
+    function switchTab(tab) {
+      const isInput = tab === 'input';
+      document.getElementById('tabBtnInput').classList.toggle('active', isInput);
+      document.getElementById('tabBtnOutput').classList.toggle('active', !isInput);
+      document.getElementById('paneInput').classList.toggle('active', isInput);
+      document.getElementById('paneOutput').classList.toggle('active', !isInput);
+      document.getElementById('bottomBar').style.display = isInput ? 'block' : 'none';
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+
+    function syncVolFromMass(r) {
+      const d = toNum(r.density);
+      const mg = toNum(r.massMg);
+      r.volUl = (r.isLiquid && d > 0 && mg !== '') ? (mg / d) : '';
+    }
+
+    function recalc(skipRowId = null, skipField = null) {
+      const ref = getRef();
+      if (!ref) return;
+      ref.equiv = 1;
+      const refMw = toNum(ref.mw), refD = toNum(ref.density);
+
+      if (ref._driver === 'vol' && ref.isLiquid && refD > 0) {
+        const vol = toNum(ref.volUl);
+        ref.massMg = vol !== '' ? vol * refD : '';
+        ref.mmol = (ref.massMg !== '' && refMw > 0) ? ref.massMg / refMw : '';
+      } else if (ref._driver === 'mmol') {
+        const mm = toNum(ref.mmol);
+        ref.massMg = (mm !== '' && refMw > 0) ? mm * refMw : '';
+        syncVolFromMass(ref);
+      } else {
+        const mg = toNum(ref.massMg);
+        ref.mmol = (mg !== '' && refMw > 0) ? mg / refMw : '';
+        syncVolFromMass(ref);
+      }
+
+      const refMmol = toNum(ref.mmol);
+      state.rows.forEach(r => {
+        if (r.isRef) return;
+        const mw = toNum(r.mw), d = toNum(r.density);
+        if (r._driver === 'vol' && r.isLiquid && d > 0) {
+          const vol = toNum(r.volUl);
+          r.massMg = vol !== '' ? vol * d : '';
+          r.mmol = (r.massMg !== '' && mw > 0) ? r.massMg / mw : '';
+          if (r.mmol !== '' && refMmol > 0) r.equiv = r.mmol / refMmol;
+        } else if (r._driver === 'mass') {
+          const mg = toNum(r.massMg);
+          r.mmol = (mg !== '' && mw > 0) ? mg / mw : '';
+          if (r.mmol !== '' && refMmol > 0) r.equiv = r.mmol / refMmol;
+          syncVolFromMass(r);
+        } else if (r._driver === 'mmol') {
+          const mm = toNum(r.mmol);
+          r.massMg = (mm !== '' && mw > 0) ? mm * mw : '';
+          if (mm !== '' && refMmol > 0) r.equiv = mm / refMmol;
+          syncVolFromMass(r);
+        } else {
+          const eq = toNum(r.equiv);
+          if (eq !== '' && refMmol !== '' && Number.isFinite(refMmol)) {
+            r.mmol = refMmol * eq;
+            r.massMg = mw > 0 ? r.mmol * mw : '';
+          } else { r.mmol = ''; r.massMg = ''; }
+          syncVolFromMass(r);
+        }
+      });
+
+      syncInputs(skipRowId, skipField);
+      renderOutput();
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+    }
+
+    function syncInputs(skipRowId, skipField) {
+      state.rows.forEach(r => {
+        const card = document.querySelector(`.reagent-card[data-id="${r.id}"]`);
+        if (!card) return;
+        const map = {
+          mw: r.mw === '' ? '' : r.mw,
+          massMg: r.massMg === '' ? '' : fmtInput(r.massMg, 2),
+          mmol: r.mmol === '' ? '' : fmtInput(r.mmol, 3),
+          equiv: r.isRef ? '1.00' : (r.equiv === '' ? '' : fmtInput(r.equiv, 3)),
+          volUl: r.volUl === '' ? '' : fmtInput(r.volUl, 1)
+        };
+        Object.entries(map).forEach(([f, val]) => {
+          if (r.id === skipRowId && f === skipField) return;
+          const el = card.querySelector(`input[data-field="${f}"]`);
+          if (el && document.activeElement !== el) el.value = val;
+        });
+        const mlSub = card.querySelector('.ml-sub');
+        if (mlSub) {
+          mlSub.textContent = (r.isLiquid && r.volUl !== '' && r.volUl >= 1000) ? `≈ ${(r.volUl / 1000).toFixed(2)} mL` : '';
+        }
+      });
+    }
+
+    function renderFormulaRowOptions() {
+      const sel = document.getElementById('formulaTargetRow');
+      const prev = sel.value;
+      sel.innerHTML = state.rows.map((r, idx) =>
+        `<option value="${r.id}">第 ${idx + 1} 行${r.name ? ' · ' + esc(r.name.slice(0, 10)) : ''}</option>`
+      ).join('');
+      if (state.rows.some(r => r.id === prev)) sel.value = prev;
+    }
+
+    function renderCards() {
+      const box = document.getElementById('cardsContainer');
+      box.innerHTML = state.rows.map((r, idx) => `
+        <div class="reagent-card ${r.isRef ? 'is-ref' : ''}" data-id="${r.id}">
+          <div class="rc-top">
+            <button type="button" class="ref-pill" onclick="setRef('${r.id}')">
+              ${r.isRef ? '★ 基准 (1.00 eq)' : `#${idx + 1} · 设为基准`}
+            </button>
+            <div class="rc-top-right">
+              <button type="button" class="liq-pill ${r.isLiquid ? 'on' : ''}" onclick="toggleLiquid('${r.id}')">
+                ${r.isLiquid ? '💧 液体 ✓' : '💧 液体'}
+              </button>
+              <button type="button" class="del-btn" onclick="delRow('${r.id}')" title="删除">✕</button>
+            </div>
+          </div>
+          <div class="rc-grid">
+            <div class="fg rc-full">
+              <label style="display:flex;justify-content:space-between;align-items:center;">
+                <span>${r.isLiquid ? '液体名称（输入简称自动匹配）' : '化合物名称（输入简称自动匹配）'}</span>
+                <button type="button" onclick="openLibForRow('${r.id}')"
+                  style="border:1px solid var(--border-strong);background:#f8fafc;color:${r.isLiquid ? 'var(--primary)' : 'var(--ref)'};font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;cursor:pointer;">
+                  ${r.isLiquid ? '💧 选常用液体' : '🧊 选常用固体'}
+                </button>
+              </label>
+              <input type="text" value="${esc(r.name)}" placeholder="${r.isLiquid ? '第 ' + (idx + 1) + ' 行液体名称' : '第 ' + (idx + 1) + ' 行固体名称'}"
+                oninput="onText('${r.id}', this.value)" />
+            </div>
+            <div class="fg">
+              <label>分子量 (g/mol)</label>
+              <input type="number" inputmode="decimal" step="any" min="0" data-field="mw"
+                value="${r.mw === '' ? '' : r.mw}" placeholder="MW"
+                oninput="onMw('${r.id}', this.value)" />
+            </div>
+            <div class="fg">
+              <label>质量 (mg)</label>
+              <input type="number" inputmode="decimal" step="any" min="0" data-field="massMg"
+                value="${r.massMg === '' ? '' : fmtInput(r.massMg, 2)}" placeholder="mg"
+                oninput="onNum('${r.id}', 'massMg', this.value)" />
+            </div>
+            <div class="fg">
+              <label>物质的量 (mmol)</label>
+              <input type="number" inputmode="decimal" step="any" min="0" data-field="mmol"
+                value="${r.mmol === '' ? '' : fmtInput(r.mmol, 3)}" placeholder="mmol"
+                oninput="onNum('${r.id}', 'mmol', this.value)" />
+            </div>
+            <div class="fg">
+              <label>投料比 (equiv.)</label>
+              <input type="number" inputmode="decimal" step="any" min="0" data-field="equiv"
+                ${r.isRef ? 'readonly' : ''}
+                value="${r.isRef ? '1.00' : (r.equiv === '' ? '' : fmtInput(r.equiv, 3))}" placeholder="eq"
+                oninput="onNum('${r.id}', 'equiv', this.value)" />
+            </div>
+            ${r.isLiquid ? `
+            <div class="fg">
+              <label>液体密度 (g/mL)</label>
+              <input type="number" inputmode="decimal" step="any" min="0.01"
+                value="${r.density === '' ? '' : r.density}" placeholder="g/mL"
+                oninput="onDensity('${r.id}', this.value)" />
+            </div>
+            <div class="fg">
+              <label>量取体积 (μL)</label>
+              <input type="number" inputmode="decimal" step="any" min="0" data-field="volUl"
+                value="${r.volUl === '' ? '' : fmtInput(r.volUl, 1)}" placeholder="μL"
+                oninput="onNum('${r.id}', 'volUl', this.value)" />
+              <span class="ml-sub"></span>
+            </div>` : ''}
+          </div>
+        </div>
+      `).join('');
+      renderFormulaRowOptions();
+      syncInputs(null, null);
+    }
+
+    function onFormulaInput() {
+      const val = document.getElementById('formulaInput').value;
+      const resEl = document.getElementById('formulaRes');
+      if (!val.trim()) { resEl.textContent = '支持 SMILES、分子式、括号、·HCl、·H2O'; resEl.className = 'formula-res'; lastParsedMw = null; lastParsedHill = ''; return; }
+      const parsed = calculateFormulaOrSmilesMW(val);
+      if (!parsed) { lastParsedMw = null; lastParsedHill = ''; return; }
+      if (parsed.error) { resEl.textContent = parsed.error; resEl.className = 'formula-res err'; lastParsedMw = null; lastParsedHill = ''; }
+      else { resEl.textContent = `[${parsed.mode}] ${parsed.mw.toFixed(2)} g/mol (${parsed.hill})`; resEl.className = 'formula-res'; lastParsedMw = parsed.mw; lastParsedHill = parsed.hill; }
+    }
+
+    function applyFormulaToRow() {
+      if (lastParsedMw === null) { showToast('请先输入有效的分子式或 SMILES'); return; }
+      const targetId = document.getElementById('formulaTargetRow').value;
+      const r = state.rows.find(x => x.id === targetId);
+      if (!r) return;
+      r.mw = lastParsedMw;
+      if (!r.name.trim()) {
+        const rawTxt = document.getElementById('formulaInput').value.trim();
+        r.name = rawTxt.length <= 20 ? rawTxt : lastParsedHill;
+        renderCards();
+      }
+      recalc();
+      showToast(`已填入 MW ${lastParsedMw.toFixed(2)}`);
+    }
+
+    function renderSolventControls() {
+      const sInput = document.getElementById('solventName'), cInput = document.getElementById('concM');
+      if (document.activeElement !== sInput) sInput.value = state.solventName || '';
+      if (document.activeElement !== cInput) cInput.value = state.concM || '';
+      syncConcChips();
+    }
+
+    function syncConcChips() {
+      const c = toNum(state.concM);
+      document.querySelectorAll('#concChips .chip').forEach(ch => {
+        const val = Number(ch.textContent.replace(' M', ''));
+        ch.classList.toggle('active', Number.isFinite(c) && Math.abs(val - c) < 1e-6);
+      });
+    }
+
+    function renderOutput() {
+      const ref = getRef();
+      const refMmol = toNum(ref?.mmol) || 0;
+      const concM = toNum(state.concM) || 0;
+      const solvMl = (refMmol > 0 && concM > 0) ? (refMmol / concM) : 0;
+
+      document.getElementById('bottomBarInfo').innerHTML = solvMl > 0
+        ? `<span>基准 ${fmtMmol(refMmol)} mmol · ${recommendFlask(solvMl)}</span><strong>建议溶剂：${fmtSolvent(solvMl)}</strong>`
+        : `<span>基准 ${refMmol > 0 ? fmtMmol(refMmol) + ' mmol' : '未设定'}</span><strong>建议溶剂：待定</strong>`;
+
+      document.getElementById('summaryBanner').innerHTML = `
+        <div style="font-weight:700;">📌 本次反应投料总览</div>
+        <div class="summary-banner-grid">
+          <div class="sb-stat"><span>基准投料规模</span><strong>${refMmol > 0 ? fmtMmol(refMmol) + ' mmol' : '—'}</strong></div>
+          <div class="sb-stat"><span>建议溶剂 (${concM || '—'} M)</span><strong>${solvMl > 0 ? fmtSolvent(solvMl) : '—'}</strong></div>
+          <div class="sb-stat"><span>推荐反应容器</span><strong>${recommendFlask(solvMl)}</strong></div>
+          <div class="sb-stat"><span>物料总数</span><strong>${state.rows.length} 项 + 溶剂</strong></div>
+        </div>
+      `;
+
+      const cardsHtml = state.rows.map((r, i) => {
+        const primaryVal = r.isLiquid ? fmtVol(r.volUl) : fmtMass(r.massMg);
+        const subMass = r.isLiquid ? `<span>(${fmtMass(r.massMg)}, d=${r.density || '?'})</span>` : '';
+        return `
+        <div class="check-card ${r.isRef ? 'is-ref' : ''} ${r.checked ? 'checked' : ''}" onclick="toggleCheck('${r.id}')">
+          <div class="check-box">${r.checked ? '✓' : ''}</div>
+          <div class="cc-body">
+            <div class="cc-head">
+              <span class="cc-name">${esc(r.name || `未命名物料 #${i + 1}`)}</span>
+              <span class="cc-badge ${r.isRef ? 'ref' : ''}">${r.isRef ? '基准物' : (r.isLiquid ? `液体 #${i + 1}` : `投料 #${i + 1}`)}</span>
+            </div>
+            <div class="cc-nums">
+              <span class="cc-main-val">${primaryVal}</span>
+              ${subMass}
+              <span>${fmtMmol(r.mmol)} mmol</span>
+              <span>${r.isRef ? '1.00' : fmtEquiv(r.equiv)} eq</span>
+              <span>MW ${r.mw !== '' ? Number(r.mw).toFixed(2) : '—'}</span>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+
+      const solvCardHtml = solvMl > 0 ? `
+        <div class="check-card is-solv ${state.solventChecked ? 'checked' : ''}" onclick="toggleSolventCheck()">
+          <div class="check-box">${state.solventChecked ? '✓' : ''}</div>
+          <div class="cc-body">
+            <div class="cc-head">
+              <span class="cc-name">${esc(state.solventName || '反应溶剂')}</span>
+              <span class="cc-badge solv">建议溶剂</span>
+            </div>
+            <div class="cc-nums">
+              <span class="cc-main-val">${fmtSolvent(solvMl)}</span>
+              <span>按 ${concM} M (${(1 / concM).toFixed(1)} mL/mmol)</span>
+            </div>
+          </div>
+        </div>` : '';
+
+      document.getElementById('checklistContainer').innerHTML = cardsHtml + solvCardHtml;
+    }
+
+    function toggleCheck(id) { const r = state.rows.find(x => x.id === id); if (!r) return; r.checked = !r.checked; renderOutput(); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {} }
+    function toggleSolventCheck() { state.solventChecked = !state.solventChecked; renderOutput(); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {} }
+    function clearChecks() { state.rows.forEach(r => r.checked = false); state.solventChecked = false; renderOutput(); try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {} showToast('已重置勾选状态'); }
+
+    function onText(id, val) {
+      const r = state.rows.find(x => x.id === id);
+      if (!r) return;
+      const wasEmptyMw = (r.mw === '');
+      r.name = val;
+      const preset = findPresetReagent(val, r.isLiquid ? 'liquid' : 'solid');
+      if (preset && wasEmptyMw) {
+        r.mw = preset.mw;
+        r.density = r.isLiquid ? (preset.density || '') : '';
+        if (!r.isRef && (r.massMg === '' && r.mmol === '')) { r.equiv = preset.eq; r._driver = 'equiv'; }
+        renderCards();
+        recalc();
+        showToast(`已匹配${r.isLiquid ? '液体' : '固体'} ${preset.name} (MW ${preset.mw})`);
+        return;
+      }
+      renderFormulaRowOptions();
+      recalc();
+    }
+
+    function toggleLiquid(id) {
+      const r = state.rows.find(x => x.id === id);
+      if (!r) return;
+      r.isLiquid = !r.isLiquid;
+      if (r.isLiquid && !r.density) r.density = 1.00;
+      if (!r.isLiquid) { r.volUl = ''; if (r._driver === 'vol') r._driver = r.isRef ? 'mass' : 'equiv'; }
+      renderCards();
+      recalc();
+    }
+
+    function onDensity(id, val) {
+      const r = state.rows.find(x => x.id === id);
+      if (!r) return;
+      r.density = toNum(val);
+      if (r._driver === 'vol') r._driver = r.isRef ? 'mass' : 'equiv';
+      recalc(id, 'density');
+    }
+
+    function onMw(id, val) { const r = state.rows.find(x => x.id === id); if (r) { r.mw = toNum(val); recalc(id, 'mw'); } }
+
+    function onNum(id, field, val) {
+      const r = state.rows.find(x => x.id === id);
+      if (!r) return;
+      const num = toNum(val);
+      if (field === 'massMg') { r.massMg = num; r._driver = 'mass'; }
+      else if (field === 'mmol') { r.mmol = num; r._driver = 'mmol'; }
+      else if (field === 'volUl') { r.volUl = num; r._driver = 'vol'; }
+      else if (field === 'equiv') { if (r.isRef) return; r.equiv = num; r._driver = 'equiv'; }
+      recalc(id, field);
+      const refMmol = toNum(getRef()?.mmol);
+      if (!r.isRef && r._driver !== 'equiv' && refMmol > 0) r._driver = 'equiv';
+    }
+
+    function setRef(id) {
+      const target = state.rows.find(x => x.id === id);
+      if (!target || target.isRef) return;
+      const tMmol = toNum(target.mmol);
+      state.rows.forEach(r => { r.isRef = (r.id === id); if (!r.isRef) r._driver = 'equiv'; });
+      if (tMmol > 0) {
+        target._driver = 'mmol';
+        state.rows.forEach(r => {
+          if (r.id === id) r.equiv = 1;
+          else if (toNum(r.mmol) > 0) r.equiv = toNum(r.mmol) / tMmol;
+        });
+      } else { target.equiv = 1; target._driver = 'mass'; }
+      renderCards();
+      recalc();
+    }
+
+    function addRow(preset = null) {
+      state.rows.push({
+        id: uid(),
+        name: preset ? preset.name : '',
+        mw: preset ? preset.mw : '',
+        isLiquid: preset ? !!preset.isLiquid : false,
+        density: preset ? (preset.density || '') : '',
+        volUl: '',
+        massMg: '',
+        mmol: '',
+        equiv: preset ? preset.eq : 1.0,
+        isRef: false,
+        _driver: 'equiv',
+        checked: false
+      });
+      renderCards();
+      recalc();
+    }
+
+    function delRow(id) {
+      if (state.rows.length <= 1) { showToast('至少保留一行物料'); return; }
+      const idx = state.rows.findIndex(x => x.id === id);
+      const wasRef = state.rows[idx]?.isRef;
+      state.rows.splice(idx, 1);
+      if (wasRef) { state.rows[0].isRef = true; state.rows[0].equiv = 1; state.rows[0]._driver = 'mass'; }
+      renderCards();
+      recalc();
+    }
+
+    function updateSolvent(field, val) {
+      if (field === 'name') state.solventName = val;
+      if (field === 'concM') { const n = toNum(val); if (n !== '' && n > 0) state.concM = n; else return; }
+      syncConcChips();
+      recalc();
+    }
+
+    function setConc(m) { state.concM = m; renderSolventControls(); recalc(); }
+
+    function loadSample() { state = sampleData(); renderCards(); renderSolventControls(); recalc(); showToast('已载入示例'); }
+
+    function resetBlank() {
+      state = {
+        rows: [
+          { id: uid(), name: '', mw: '', isLiquid: false, density: '', volUl: '', massMg: '', mmol: '', equiv: 1.00, isRef: true, _driver: 'mass', checked: false },
+          { id: uid(), name: '', mw: '', isLiquid: false, density: '', volUl: '', massMg: '', mmol: '', equiv: 1.20, isRef: false, _driver: 'equiv', checked: false }
+        ],
+        solventName: '',
+        concM: 0.1,
+        solventChecked: false
+      };
+      renderCards();
+      renderSolventControls();
+      recalc();
+      showToast('已清空');
+    }
+
+    // Pure clean copy without signature
+    function copyTextSummary() {
+      const ref = getRef();
+      const refMmol = toNum(ref?.mmol) || 0;
+      const concM = toNum(state.concM) || 0;
+      const solvMl = (refMmol > 0 && concM > 0) ? (refMmol / concM) : 0;
+
+      const lines = ['🧪 有机合成投料表', `规模：${fmtMmol(refMmol)} mmol | 推荐容器：${recommendFlask(solvMl)}`, '---'];
+      state.rows.forEach((r, i) => {
+        const qty = r.isLiquid ? `${fmtVol(r.volUl)} (${fmtMass(r.massMg)})` : fmtMass(r.massMg);
+        lines.push(`${i + 1}. ${r.name || '未命名'}: ${qty} (${fmtMmol(r.mmol)} mmol, ${r.isRef ? '1.00' : fmtEquiv(r.equiv)} eq, MW ${r.mw || '—'})`);
+      });
+      if (solvMl > 0) lines.push(`溶剂 ${state.solventName || ''}: ${fmtSolvent(solvMl)} (${concM} M)`);
+      copyClipboard(lines.join('\n'), '✅ 已复制清单文本');
+    }
+
+    function copyForExcel() {
+      const ref = getRef();
+      const refMmol = toNum(ref?.mmol) || 0;
+      const concM = toNum(state.concM) || 0;
+      const solvMl = (refMmol > 0 && concM > 0) ? (refMmol / concM) : 0;
+
+      const header = ['序号', '类别', '化合物名称', '分子量', '质量', '液体体积', 'mmol', '投料比'].join('\t');
+      const lines = state.rows.map((r, i) => [
+        i + 1, r.isRef ? '基准物' : '投料', r.name || '未命名',
+        r.mw !== '' ? Number(r.mw).toFixed(2) : '', fmtMass(r.massMg), r.isLiquid ? fmtVol(r.volUl) : '',
+        fmtMmol(r.mmol), r.isRef ? '1.00' : fmtEquiv(r.equiv)
+      ].join('\t'));
+      if (solvMl > 0) lines.push([state.rows.length + 1, '建议溶剂', state.solventName || '溶剂', '', '', fmtSolvent(solvMl), `${concM} M`, recommendFlask(solvMl)].join('\t'));
+      copyClipboard([header, ...lines].join('\n'), '✅ 已复制 Excel 表格');
+    }
+
+    function copyClipboard(text, msg) {
+      if (window.AndroidBridge && typeof window.AndroidBridge.copyText === 'function') {
+        window.AndroidBridge.copyText(text);
+        showToast(msg);
+        return;
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => showToast(msg));
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast(msg);
+      }
+    }
+
+    window._onAndroidBack = function() {
+      const lib = document.getElementById('libModal');
+      if (lib && lib.classList.contains('open')) {
+        closeLib();
+        return true;
+      }
+      const paneOut = document.getElementById('paneOutput');
+      if (paneOut && paneOut.classList.contains('active')) {
+        switchTab('input');
+        return true;
+      }
+      return false;
+    };
+
+    let libFilter = 'all';
+    let libTargetRowId = null;
+    function setLibFilter(mode, el) {
+      libFilter = mode;
+      document.querySelectorAll('#libTabs .chip').forEach(c => c.classList.remove('active'));
+      if (el) el.classList.add('active');
+      renderLibGrid();
+    }
+    function openLib() {
+      libTargetRowId = null;
+      libFilter = 'all';
+      document.getElementById('libTabs').style.display = 'flex';
+      document.querySelectorAll('#libTabs .chip').forEach((c, idx) => c.classList.toggle('active', idx === 0));
+      document.getElementById('libTitle').textContent = '🧪 常用药化试剂（点选新增一行）';
+      document.getElementById('libSearch').value = '';
+      renderLibGrid();
+      document.getElementById('libModal').classList.add('open');
+    }
+    function openLibForRow(rowId) {
+      const r = state.rows.find(x => x.id === rowId);
+      if (!r) return;
+      const idx = state.rows.indexOf(r) + 1;
+      libTargetRowId = rowId;
+      libFilter = r.isLiquid ? 'liquid' : 'solid';
+      document.getElementById('libTabs').style.display = 'none';
+      document.getElementById('libTitle').textContent = r.isLiquid
+        ? `💧 选择常用液体试剂（第 ${idx} 行）`
+        : `🧊 选择常用固体试剂（第 ${idx} 行）`;
+      document.getElementById('libSearch').value = '';
+      renderLibGrid();
+      document.getElementById('libModal').classList.add('open');
+    }
+    function closeLib() { document.getElementById('libModal').classList.remove('open'); }
+    function renderLibGrid() {
+      const q = normKey(document.getElementById('libSearch').value);
+      const list = COMMON_REAGENTS.filter(item => {
+        if (libFilter === 'liquid' && !item.isLiquid) return false;
+        if (libFilter === 'solid' && item.isLiquid) return false;
+        return !q || normKey(item.name).includes(q) || (item.aliases && item.aliases.some(a => normKey(a).includes(q)));
+      });
+      document.getElementById('libGrid').innerHTML = list.map(item => `
+        <div class="lib-item" onclick="pickLibReagent(${COMMON_REAGENTS.indexOf(item)})">
+          <strong>${esc(item.name)}</strong>
+          <span>MW ${item.mw.toFixed(2)} ${item.isLiquid ? `· 液体 d=${item.density}` : '· 固体'} · ${item.eq} eq</span>
+        </div>
+      `).join('') || '<div style="color:var(--muted);padding:10px;">未找到匹配试剂</div>';
+    }
+    function pickLibReagent(idx) {
+      const item = COMMON_REAGENTS[idx];
+      if (!item) return;
+      if (libTargetRowId) {
+        const r = state.rows.find(x => x.id === libTargetRowId);
+        if (r) {
+          r.name = item.name;
+          r.mw = item.mw;
+          r.isLiquid = item.isLiquid;
+          r.density = item.isLiquid ? item.density : '';
+          if (!r.isRef) { r.equiv = item.eq; r._driver = 'equiv'; }
+          renderCards();
+          recalc();
+          showToast(`已填入 ${item.name}`);
+        }
+      } else {
+        addRow(item);
+        showToast(`已添加 ${item.name}`);
+      }
+      closeLib();
+    }
+
+    let timer = null;
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(timer);
+      timer = setTimeout(() => el.classList.remove('show'), 2200);
+    }
+
+    (function init() {
+      const wmSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="220" height="140"><text x="110" y="70" text-anchor="middle" dominant-baseline="middle" transform="rotate(-22 110 70)" font-family="PingFang SC,Microsoft YaHei,sans-serif" font-size="12" font-weight="600" fill="#0f172a" fill-opacity="0.05">耄耋小镇的基米大王 制作</text></svg>`;
+      document.getElementById('wmLayer').style.backgroundImage = `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(wmSvg)}")`;
+
+      try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) state = JSON.parse(raw); } catch (e) {}
+      if (!state || !Array.isArray(state.rows) || state.rows.length === 0) state = sampleData();
+
+      renderCards();
+      renderSolventControls();
+      recalc();
+    })();
+  </script>
+</body>
+</html>
